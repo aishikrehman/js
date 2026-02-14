@@ -115,7 +115,7 @@
             <div class="flex items-center gap-3">
                 <span class="pulse-dot"></span>
                 <div class="flex flex-col">
-                    <span class="font-bold">শব্দ সংখ্যা যাচাই চলছে (টার্বো মোড)</span>
+                    <span class="font-bold">শব্দ সংখ্যা যাচাই চলছে (সুপার ফাস্ট)</span>
                     <span class="text-xs text-slate-500">রিয়েল-টাইমে নিবন্ধ চেক করা হচ্ছে...</span>
                 </div>
             </div>
@@ -419,7 +419,12 @@
                 '.mbox-small', '.ambox', '.navbox', '.catlinks', '.noprint', '.metadata', 
                 '.portal', 'style', 'script', '.thumbinner', '.listing-lastedit'
             ];
-            unwanted.forEach(s => doc.querySelectorAll(s).forEach(e => e.remove()));
+            
+            // Optimization: Use a single querySelectorAll with joined selectors
+            // This is significantly faster than looping through the array
+            const selector = unwanted.join(',');
+            const elements = doc.querySelectorAll(selector);
+            elements.forEach(e => e.remove());
             
             const text = doc.body.textContent || '';
             const words = isBn 
@@ -490,8 +495,9 @@
             const ts = Date.now();
             const strategies = [
                 { url: `${CONFIG.fountainBase}?_t=${ts}` },
-                { url: `https://corsproxy.io/?${encodeURIComponent(CONFIG.fountainBase + '?_t=' + ts)}` },
-                { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(CONFIG.fountainBase + '?_t=' + ts)}` }
+                { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(CONFIG.fountainBase + '?_t=' + ts)}` },
+                { url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(CONFIG.fountainBase + '?_t=' + ts)}` },
+                { url: `https://corsproxy.io/?${encodeURIComponent(CONFIG.fountainBase + '?_t=' + ts)}` }
             ];
 
             try {
@@ -539,8 +545,9 @@
 
             const strategies = [
                 { url: targetUrlWithTs },
-                { url: `https://corsproxy.io/?${encodeURIComponent(targetUrlWithTs)}` },
-                { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrlWithTs)}` }
+                { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrlWithTs)}` },
+                { url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrlWithTs)}` },
+                { url: `https://corsproxy.io/?${encodeURIComponent(targetUrlWithTs)}` }
             ];
             
             // let active = CONFIG.forceProxy ? strategies.slice(1) : strategies;
@@ -561,7 +568,7 @@
                 saveToHistory(inputId);
                 processData(globalData, inputId, true);
                 fetchRealWikiCounts(globalData.articles, globalData.wiki||'en');
-            } else { showError("সংযোগ ব্যর্থ হয়েছে।"); }
+            } else { showError("সংযোগ ব্যর্থ হয়েছে (CORS)। দয়া করে অন্য ব্রাউজার ব্যবহার করুন বা কিছুক্ষণ পরে চেষ্টা করুন।"); }
         }
 
         async function fetchRealWikiCounts(articles, wiki) {
@@ -573,7 +580,7 @@
             statusEl.classList.remove('hidden');
             
             const siteUrl = `${wiki}.wikipedia.org`;
-            const MAX_CON = 100; 
+            const MAX_CON = 150; // Boosted to 150 concurrent requests
             let idx = 0;
             
             // Debounce render to animation frames for max smoothness
